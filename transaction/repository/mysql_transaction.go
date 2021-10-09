@@ -123,7 +123,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		if product.PromotionId == 1 {
 			// check promo free item rule
 			pfir = true
-			pfir := models.ProductFreeItemRule{}
+			pfir := models.PromoFreeItemRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_free_item_rules pfir where pfir.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&pfir.PromotionId, &pfir.FreeProductId)
 			if err != nil {
@@ -134,7 +134,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 			freeProductId = pfir.FreeProductId
 		} else if product.PromotionId == 2 {
 			// check promo payless rule
-			ppr := models.ProductPaylessRule{}
+			ppr := models.PromotionPaylessRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_payless_rules ppr where ppr.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&ppr.PromotionId, &ppr.RequirementQty, &ppr.PromoQty)
 			if err != nil {
@@ -151,7 +151,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 			}
 		} else if product.PromotionId == 3 {
 			// check promo discount rule
-			pdr := models.ProductDiscountRule{}
+			pdr := models.PromoDiscountRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_discount_rules pdr where pdr.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&pdr.PromotionId, &pdr.RequirementMinQty, &pdr.PercentageDiscount)
 			if err != nil {
