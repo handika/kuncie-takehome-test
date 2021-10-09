@@ -134,7 +134,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 			freeProductId = pfir.FreeProductId
 		} else if product.PromotionId == 2 {
 			// check promo payless rule
-			ppr := models.PromotionPaylessRule{}
+			ppr := models.PromoPaylessRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_payless_rules ppr where ppr.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&ppr.PromotionId, &ppr.RequirementQty, &ppr.PromoQty)
 			if err != nil {
