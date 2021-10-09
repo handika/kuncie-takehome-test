@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	sqlmock "gopkg.in/DATA-DOG/go-sqlmock.v1"
 
-	"github.com/handika/kuncie-takehome-test/pdr/repository"
+	pdrRepo "github.com/handika/kuncie-takehome-test/pdr/repository"
 )
 
 func TestGetByID(t *testing.T) {
@@ -17,17 +17,15 @@ func TestGetByID(t *testing.T) {
 	}
 
 	rows := sqlmock.NewRows([]string{"promotion_id", "requirement_min_qty", "percentage_discount"}).
-		AddRow(2, 3, 10)
+		AddRow(1, 1, 1)
 
-	query := "SELECT promotion_id, requirement_min_qty, percentage_discount FROM promo_discount_rules WHERE promotion_id=\\?"
+	query := "SELECT promotion_id, requirement_min_qty, percentage_discount FROM promo_discount_rules WHERE transaction_id = \\?"
 
-	prep := mock.ExpectPrepare(query)
-	userID := int64(1)
-	prep.ExpectQuery().WithArgs(userID).WillReturnRows(rows)
+	mock.ExpectQuery(query).WillReturnRows(rows)
+	a := pdrRepo.NewMysqlPdrRepository(db)
 
-	a := repository.NewMysqlPdrRepository(db)
-
-	anArticle, err := a.GetByID(context.TODO(), userID)
+	num := int64(5)
+	anPdr, err := a.GetByID(context.TODO(), num)
 	assert.NoError(t, err)
-	assert.NotNil(t, anArticle)
+	assert.NotNil(t, anPdr)
 }

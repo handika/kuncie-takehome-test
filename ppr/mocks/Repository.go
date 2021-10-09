@@ -14,15 +14,15 @@ type Repository struct {
 }
 
 // GetByID provides a mock function with given fields: ctx, id
-func (_m *Repository) GetByID(ctx context.Context, id int64) (*models.PromotionPaylessRule, error) {
+func (_m *Repository) GetByID(ctx context.Context, id int64) (*models.PromoPaylessRule, error) {
 	ret := _m.Called(ctx, id)
 
-	var r0 *models.PromotionPaylessRule
-	if rf, ok := ret.Get(0).(func(context.Context, int64) *models.PromotionPaylessRule); ok {
+	var r0 *models.PromoPaylessRule
+	if rf, ok := ret.Get(0).(func(context.Context, int64) *models.PromoPaylessRule); ok {
 		r0 = rf(ctx, id)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*models.PromotionPaylessRule)
+			r0 = ret.Get(0).(*models.PromoPaylessRule)
 		}
 	}
 

@@ -10,41 +10,66 @@ import (
 	"github.com/handika/kuncie-takehome-test/ppr"
 )
 
-type mysqlPprRepo struct {
-	DB *sql.DB
+const (
+	timeFormat = "2006-01-02T15:04:05.999Z07:00" // reduce precision from RFC3339Nano as date format
+)
+
+type mysqlPprRepository struct {
+	Conn *sql.DB
 }
 
-// NewMysqlPprRepository will create an implementation of ppr.Repository
-func NewMysqlPprRepository(db *sql.DB) ppr.Repository {
-	return &mysqlPprRepo{
-		DB: db,
-	}
+// NewMysqlPprRepository will create an object that represent the ppr.Repository interface
+func NewMysqlPprRepository(Conn *sql.DB) ppr.Repository {
+	return &mysqlPprRepository{Conn}
 }
 
-func (m *mysqlPprRepo) getOne(ctx context.Context, query string, args ...interface{}) (*models.PromotionPaylessRule, error) {
-
-	stmt, err := m.DB.PrepareContext(ctx, query)
-	if err != nil {
-		logrus.Error(err)
-		return nil, err
-	}
-	row := stmt.QueryRowContext(ctx, args...)
-	a := &models.PromotionPaylessRule{}
-
-	err = row.Scan(
-		&a.PromotionId,
-		&a.RequirementQty,
-		&a.PromoQty,
-	)
+func (m *mysqlPprRepository) fetch(ctx context.Context, query string, args ...interface{}) ([]*models.PromoPaylessRule, error) {
+	rows, err := m.Conn.QueryContext(ctx, query, args...)
 	if err != nil {
 		logrus.Error(err)
 		return nil, err
 	}
 
-	return a, nil
+	defer func() {
+		err := rows.Close()
+		if err != nil {
+			logrus.Error(err)
+		}
+	}()
+
+	result := make([]*models.PromoPaylessRule, 0)
+	for rows.Next() {
+		t := new(models.PromoPaylessRule)
+		err = rows.Scan(
+			&t.PromotionId,
+			&t.RequirementQty,
+			&t.PromoQty,
+		)
+
+		if err != nil {
+			logrus.Error(err)
+			return nil, err
+		}
+		result = append(result, t)
+	}
+
+	return result, nil
 }
 
-func (m *mysqlPprRepo) GetByID(ctx context.Context, id int64) (*models.PromotionPaylessRule, error) {
-	query := `SELECT promotion_id, requirement_qty, promo_qty FROM promo_payless_rules WHERE promotion_id=?`
-	return m.getOne(ctx, query, id)
+func (m *mysqlPprRepository) GetByID(ctx context.Context, id int64) (res *models.PromoPaylessRule, err error) {
+	query := `SELECT promotion_id, requirement_qty, promo_qty
+  						FROM promo_payless_rules WHERE transaction_id = ?`
+
+	list, err := m.fetch(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list) > 0 {
+		res = list[0]
+	} else {
+		return nil, models.ErrNotFound
+	}
+
+	return
 }
