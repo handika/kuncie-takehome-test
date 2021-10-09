@@ -25,7 +25,7 @@ func TestGetByID(t *testing.T) {
 	a := pdrRepo.NewMysqlPfirRepository(db)
 
 	num := int64(5)
-	anPdr, err := a.GetByID(context.TODO(), num)
+	anPfir, err := a.GetByID(context.TODO(), num)
 	assert.NoError(t, err)
-	assert.NotNil(t, anPdr)
+	assert.NotNil(t, anPfir)
 }

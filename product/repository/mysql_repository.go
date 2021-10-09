@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/handika/kuncie-takehome-test/models"
 	"github.com/handika/kuncie-takehome-test/product"
@@ -59,7 +60,8 @@ func (m *mysqlProductRepository) fetch(ctx context.Context, query string, args .
 }
 
 func (m *mysqlProductRepository) GetByID(ctx context.Context, id int64) (res *models.Product, err error) {
-	query := `SELECT id, sku, name, price, qty, promotion_id FROM products WHERE id=?`
+	query := `SELECT id, sku, name, price, qty, promotion_id
+  						FROM products WHERE id = ?`
 
 	list, err := m.fetch(ctx, query, id)
 	if err != nil {
@@ -75,27 +77,27 @@ func (m *mysqlProductRepository) GetByID(ctx context.Context, id int64) (res *mo
 	return
 }
 
-// func (m *mysqlProductRepository) Update(ctx context.Context, ar *models.Product) error {
-// 	query := `UPDATE products set sku=?, name=?, price=?, qty=?, discount=? WHERE ID = ?`
+func (m *mysqlProductRepository) Update(ctx context.Context, ar *models.Product) error {
+	query := `UPDATE products SET sku=?, name=?, price=?, qty=?, promotion_id=? WHERE id = ?`
 
-// 	stmt, err := m.Conn.PrepareContext(ctx, query)
-// 	if err != nil {
-// 		return nil
-// 	}
+	stmt, err := m.Conn.PrepareContext(ctx, query)
+	if err != nil {
+		return nil
+	}
 
-// 	res, err := stmt.ExecContext(ctx, ar.Sku, ar.Name, ar.Price, ar.Qty, ar.Discount)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	affect, err := res.RowsAffected()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	if affect != 1 {
-// 		err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
+	res, err := stmt.ExecContext(ctx, ar.Sku, ar.Name, ar.Price, ar.Qty, ar.PromotionId, ar.ID)
+	if err != nil {
+		return err
+	}
+	affect, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affect != 1 {
+		err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
 
-// 		return err
-// 	}
+		return err
+	}
 
-// 	return nil
-// }
+	return nil
+}

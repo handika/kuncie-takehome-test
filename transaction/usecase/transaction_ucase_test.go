@@ -46,6 +46,26 @@ func TestGetByID(t *testing.T) {
 
 }
 
+func TestUpdate(t *testing.T) {
+	mockTransactionRepo := new(mocks.Repository)
+	mockTransaction := models.Transaction{
+		UserId:     1,
+		Date:       time.Now(),
+		GrandTotal: 1000,
+		ID:         23,
+	}
+
+	t.Run("success", func(t *testing.T) {
+		mockTransactionRepo.On("Update", mock.Anything, &mockTransaction).Once().Return(nil)
+
+		u := ucase.NewTransactionUsecase(mockTransactionRepo, time.Second*2)
+
+		err := u.Update(context.TODO(), &mockTransaction)
+		assert.NoError(t, err)
+		mockTransactionRepo.AssertExpectations(t)
+	})
+}
+
 // func TestStore(t *testing.T) {
 // 	mockTransactionRepo := new(mocks.Repository)
 // 	mockTransaction := models.Transaction{

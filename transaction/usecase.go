@@ -10,4 +10,5 @@ import (
 type Usecase interface {
 	GetByID(ctx context.Context, id int64) (*models.Transaction, error)
 	Store(context.Context, *models.Transaction) error
+	Update(ctx context.Context, ar *models.Transaction) error
 }

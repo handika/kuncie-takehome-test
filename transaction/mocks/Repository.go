@@ -49,3 +49,17 @@ func (_m *Repository) Store(ctx context.Context, a *models.Transaction) error {
 
 	return r0
 }
+
+// Update provides a mock function with given fields: ctx, ar
+func (_m *Repository) Update(ctx context.Context, ar *models.Transaction) error {
+	ret := _m.Called(ctx, ar)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *models.Transaction) error); ok {
+		r0 = rf(ctx, ar)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}

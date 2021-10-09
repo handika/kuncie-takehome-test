@@ -283,6 +283,31 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 	return nil
 }
 
+func (m *mysqlTransactionRepository) Update(ctx context.Context, ar *models.Transaction) error {
+	query := `UPDATE transactions set user_id=?, date=?, grand_total=? WHERE id = ?`
+
+	stmt, err := m.Conn.PrepareContext(ctx, query)
+	if err != nil {
+		return nil
+	}
+
+	res, err := stmt.ExecContext(ctx, ar.UserId, ar.Date, ar.GrandTotal, ar.ID)
+	if err != nil {
+		return err
+	}
+	affect, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affect != 1 {
+		err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
+
+		return err
+	}
+
+	return nil
+}
+
 // DecodeCursor will decode cursor from user for mysql
 func DecodeCursor(encodedTime string) (time.Time, error) {
 	byt, err := base64.StdEncoding.DecodeString(encodedTime)

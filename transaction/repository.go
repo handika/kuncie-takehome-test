@@ -10,4 +10,5 @@ import (
 type Repository interface {
 	GetByID(ctx context.Context, id int64) (*models.Transaction, error)
 	Store(ctx context.Context, a *models.Transaction) error
+	Update(ctx context.Context, ar *models.Transaction) error
 }

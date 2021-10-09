@@ -50,3 +50,11 @@ func (a *transactionUsecase) Store(c context.Context, m *models.Transaction) err
 	}
 	return nil
 }
+
+func (a *transactionUsecase) Update(c context.Context, ar *models.Transaction) error {
+
+	ctx, cancel := context.WithTimeout(c, a.contextTimeout)
+	defer cancel()
+
+	return a.transactionRepo.Update(ctx, ar)
+}
