@@ -1,0 +1,53 @@
+scalar DateTime
+
+type Transaction {
+    ID: Int
+    UserId: Int
+    Date: DateTime
+    GrandTotal: Float
+    Details: [TransactionDetail]
+}
+
+type TransactionDetail {
+    ID: Int
+    TransactionId: Int
+    ProductId: Int
+    Price: Float
+    Qty: Int
+    SubTotal: Float
+    Discount: Int
+}
+
+type TransactionInput {
+    UserId: Int
+    Items: [TransactionDetailInput!]!
+}
+
+type TransactionDetailInput {
+    ProductId: Int
+    Qty: Int
+}
+
+type Edge {
+    cursor: String
+    node: Transaction
+}
+
+type PageInfo {
+    endCursor: String
+    hasNextPage: Boolean
+}
+
+type TransactionsResult {
+    edges: [Edge]
+    pageInfo: PageInfo
+    totalCount: Int
+}
+
+type Query {
+    GetTransactionByID(id: Int): Transaction
+}
+
+type Mutation {
+    StoreTransaction(input: TransactionInput): Transaction
+}
