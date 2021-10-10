@@ -171,13 +171,6 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 
 		// check product qty
 		if product.Qty < detail.Qty {
-			log.Printf("db.tx.ExecContext got %s", err.Error())
-			errRollback := tx.Rollback()
-			if errRollback != nil {
-				log.Printf("error rollback, got %s", err.Error())
-				return errRollback
-			}
-
 			return errors.New("Item with SKU: " + product.Sku + " out of stock!")
 		}
 
