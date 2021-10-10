@@ -56,8 +56,43 @@ $ docker-compose up
 ```
 $ migrate -database mysql://kuncie:kuncie@/kuncie_store -path ./sql up
 ```
-**Step 5 GraphQL Playground**
+
+**Step 4 GraphiQL Playground**
 
 ```
 http://localhost:9090/
+```
+
+**Step 5 Calling APIs**
+
+Scanned Items: MacBook Pro, Raspberry Pi B 
+```
+mutation {
+  StoreTransaction(input: {user_id: 1, items: [{product_id: 2, qty: 1}, {product_id: 4, qty: 1}]})
+}
+```
+
+Scanned Items: Google Home, Google Home, Google Home 
+```
+mutation {
+  StoreTransaction(input: {user_id: 1, items: [{product_id: 1, qty: 3}]})
+}
+```
+
+Scanned Items: Alexa Speaker, Alexa Speaker, Alexa Speaker
+```
+mutation {
+  StoreTransaction(input: {user_id: 1, items: [{product_id: 3, qty: 3}]})
+}
+```
+
+Get Transaction
+```
+query {
+  GetTransactionByID(id: 1) {
+    id
+    date
+    grand_total
+  }
+}
 ```
