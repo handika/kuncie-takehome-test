@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -82,20 +83,63 @@ func (m *mysqlTransactionRepository) GetByID(ctx context.Context, id int64) (res
 }
 
 func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transaction) error {
+	// start db transaction
+	tx, err := m.Conn.BeginTx(ctx, nil)
+	if err != nil {
+		log.Printf("m.Conn.BeginTx got %s", err.Error())
+		return err
+	}
+
+	// check user exist
+	user := models.User{}
+	row := tx.QueryRowContext(ctx, "SELECT * FROM users WHERE id = ?", a.UserId)
+	err = row.Scan(&user.ID, &user.Name, &user.Email, &user.PhoneNumber, &user.Address)
+	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
+		return err
+	}
+
 	// insert into transaction
 	query := `INSERT transactions SET user_id=?, grand_total=?`
-	stmt, err := m.Conn.PrepareContext(ctx, query)
+	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
 		return err
 	}
 
 	res, err := stmt.ExecContext(ctx, a.UserId, 0)
 	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
 		return err
 	}
 
 	lastID, err := res.LastInsertId()
 	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
 		return err
 	}
 
@@ -112,14 +156,28 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 	for _, detail := range a.Details {
 		// get product by id
 		product := models.Product{}
-		row := m.Conn.QueryRowContext(ctx, "SELECT id, sku, price, qty, promotion_id FROM products WHERE id = ?", detail.ProductId)
+		row := tx.QueryRowContext(ctx, "SELECT id, sku, price, qty, promotion_id FROM products WHERE id = ?", detail.ProductId)
 		err := row.Scan(&product.ID, &product.Sku, &product.Price, &product.Qty, &product.PromotionId)
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 
 		// check product qty
 		if product.Qty < detail.Qty {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return errors.New("Item with SKU: " + product.Sku + " out of stock!")
 		}
 
@@ -133,9 +191,16 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 			// check promo free item rule
 			pfir = true
 			pfir := models.PromoFreeItemRule{}
-			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_free_item_rules pfir where pfir.promotion_id = ?", product.PromotionId)
+			row := tx.QueryRowContext(ctx, "SELECT * FROM promo_free_item_rules pfir where pfir.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&pfir.PromotionId, &pfir.FreeProductId)
 			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
 				return err
 			}
 
@@ -144,9 +209,16 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		} else if product.PromotionId == promoPayless {
 			// check promo payless rule
 			ppr := models.PromoPaylessRule{}
-			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_payless_rules ppr where ppr.promotion_id = ?", product.PromotionId)
+			row := tx.QueryRowContext(ctx, "SELECT * FROM promo_payless_rules ppr where ppr.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&ppr.PromotionId, &ppr.RequirementQty, &ppr.PromoQty)
 			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
 				return err
 			}
 
@@ -161,9 +233,16 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		} else if product.PromotionId == promoDiscount {
 			// check promo discount rule
 			pdr := models.PromoDiscountRule{}
-			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_discount_rules pdr where pdr.promotion_id = ?", product.PromotionId)
+			row := tx.QueryRowContext(ctx, "SELECT * FROM promo_discount_rules pdr where pdr.promotion_id = ?", product.PromotionId)
 			err := row.Scan(&pdr.PromotionId, &pdr.RequirementMinQty, &pdr.PercentageDiscount)
 			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
 				return err
 			}
 
@@ -174,13 +253,27 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 
 		// insert into transaction details
 		query = `INSERT INTO transaction_details(transaction_id, product_id, price, qty, sub_total, discount) VALUES(?,?,?,?,?,?)`
-		stmt, err = m.Conn.PrepareContext(ctx, query)
+		stmt, err = tx.PrepareContext(ctx, query)
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 
 		res, err = stmt.ExecContext(ctx, a.ID, detail.ProductId, product.Price, detail.Qty, subTotal, discount)
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 
@@ -188,21 +281,49 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		var qty = product.Qty - detail.Qty
 		query = `UPDATE products SET qty=? WHERE id=?`
 
-		stmt, err = m.Conn.PrepareContext(ctx, query)
+		stmt, err = tx.PrepareContext(ctx, query)
 		if err != nil {
-			return nil
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
+			return err
 		}
 
 		res, err = stmt.ExecContext(ctx, qty, product.ID)
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 		affect, err := res.RowsAffected()
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 		if affect != 1 {
-			err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
+			err = fmt.Errorf("AAA Weird  Behaviour. Total Affected: %d", affect)
 
 			return err
 		}
@@ -226,14 +347,21 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 
 		// get free product price
 		product := models.Product{}
-		row := m.Conn.QueryRowContext(ctx, "SELECT id, price FROM products WHERE id = ?", freeProductId)
+		row := tx.QueryRowContext(ctx, "SELECT id, price FROM products WHERE id = ?", freeProductId)
 		err := row.Scan(&product.ID, &product.Price)
 		if err != nil {
+			log.Printf("db.tx.ExecContext got %s", err.Error())
+			errRollback := tx.Rollback()
+			if errRollback != nil {
+				log.Printf("error rollback, got %s", err.Error())
+				return errRollback
+			}
+
 			return err
 		}
 
 		// set calculate for free item
-		var discount float64
+		var discount float64 = 0
 		if limitBuy >= limitGet {
 			discount = float64(limitGet) * product.Price
 		} else {
@@ -241,25 +369,55 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		}
 
 		// set discount for free item
-		query = `UPDATE transaction_details SET discount=? WHERE transaction_id=? and product_id=?`
+		if limitGet > 0 {
+			query = `UPDATE transaction_details SET discount=? WHERE transaction_id=? and product_id=?`
 
-		stmt, err = m.Conn.PrepareContext(ctx, query)
-		if err != nil {
-			return nil
-		}
+			stmt, err = tx.PrepareContext(ctx, query)
+			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
 
-		res, err = stmt.ExecContext(ctx, discount, a.ID, freeProductId)
-		if err != nil {
-			return err
-		}
-		affect, err := res.RowsAffected()
-		if err != nil {
-			return err
-		}
-		if affect != 1 {
-			err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
+				return err
+			}
 
-			return err
+			res, err = stmt.ExecContext(ctx, discount, a.ID, freeProductId)
+			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
+				return err
+			}
+			affect, err := res.RowsAffected()
+			if err != nil {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
+				return err
+			}
+			if affect != 1 {
+				log.Printf("db.tx.ExecContext got %s", err.Error())
+				errRollback := tx.Rollback()
+				if errRollback != nil {
+					log.Printf("error rollback, got %s", err.Error())
+					return errRollback
+				}
+
+				err = fmt.Errorf("BBB Weird  Behaviour. Total Affected: %d", affect)
+
+				return err
+			}
 		}
 
 		// count total discount
@@ -270,22 +428,62 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 	grandTotal = grandTotal - totalDiscount
 	query = `UPDATE transactions set grand_total=? WHERE id = ?`
 
-	stmt, err = m.Conn.PrepareContext(ctx, query)
+	stmt, err = tx.PrepareContext(ctx, query)
 	if err != nil {
-		return nil
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
+		return err
 	}
 
 	res, err = stmt.ExecContext(ctx, grandTotal, a.ID)
 	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
 		return err
 	}
 	affect, err := res.RowsAffected()
 	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
+
 		return err
 	}
 	if affect != 1 {
-		err = fmt.Errorf("Weird  Behaviour. Total Affected: %d", affect)
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
 
+		err = fmt.Errorf("CCC Weird  Behaviour. Total Affected: %d", affect)
+
+		return err
+	}
+
+	// commit transaction
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("db.tx.ExecContext got %s", err.Error())
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			log.Printf("error rollback, got %s", err.Error())
+			return errRollback
+		}
 		return err
 	}
 
