@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
@@ -111,10 +112,15 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 	for _, detail := range a.Details {
 		// get product by id
 		product := models.Product{}
-		row := m.Conn.QueryRowContext(ctx, "SELECT id, price, qty, promotion_id FROM products WHERE id = ?", detail.ProductId)
-		err := row.Scan(&product.ID, &product.Price, &product.Qty, &product.PromotionId)
+		row := m.Conn.QueryRowContext(ctx, "SELECT id, sku, price, qty, promotion_id FROM products WHERE id = ?", detail.ProductId)
+		err := row.Scan(&product.ID, &product.Sku, &product.Price, &product.Qty, &product.PromotionId)
 		if err != nil {
 			return err
+		}
+
+		// check product qty
+		if product.Qty < detail.Qty {
+			return errors.New("Item with SKU: " + product.Sku + " out of stock!")
 		}
 
 		// count sub total item
