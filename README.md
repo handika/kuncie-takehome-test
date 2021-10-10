@@ -24,3 +24,40 @@ Please write it in Golang or Node with a CI script that runs tests and produces 
 Finally, imagine that adding items to cart and checking out was a backend API. Please design a schema file for GraphQL on how you would do this.
 
 Thank you for your time and we look forward to reviewing your solution. If you have any questions, please feel free to contact us. Please send us a link to your git repo.
+
+# Database Schema
+
+![kuncie-db-schema](https://user-images.githubusercontent.com/1314588/136686093-885a2405-fa51-46cd-aa5e-2604c060e472.png)
+
+# Building and Running The App
+
+**Prerequisites:**
+
+    Go 1.16.9
+    Docker
+    Docker Compose
+    Golang migrate (https://github.com/golang-migrate/migrate)
+
+**Step 1 Checkout**
+
+```
+$ git clone https://github.com/handika/kuncie-takehome-test.git
+$ cd kuncie-backend-test
+```
+
+**Step 2 Start MySQL Service**
+
+```
+$ docker-compose up
+```
+
+**Step 3 Run Migration**
+
+```
+$ migrate -database mysql://kunice:kunice@/kuncie_store -path ./sql up
+```
+**Step 5 GraphQL Playground**
+
+```
+http://localhost:9090/
+```
