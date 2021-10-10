@@ -96,3 +96,8 @@ query {
   }
 }
 ```
+
+**Testing App**
+```
+go test ./... -cover -vet -all -v
+```
