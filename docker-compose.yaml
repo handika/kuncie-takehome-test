@@ -1,0 +1,30 @@
+version: '3.5'
+
+networks:
+  backend:
+    driver: bridge
+
+services:
+    mysql:
+      image: mysql:latest
+      ports:
+        - "3306:3306"
+      networks:
+        - backend
+      environment: 
+        - MYSQL_ROOT_PASSWORD=root
+        - MYSQL_DATABASE=kuncie_store
+        - MYSQL_USER=kuncie
+        - MYSQL_PASSWORD=kuncie
+    api:
+      restart: on-failure:15
+      depends_on: 
+        - mysql
+      build:
+        context: .
+      ports:
+        - "9090:9090"
+      networks:
+        - backend
+      environment: 
+        - KUNCIE_TEST_DB_HOST=mysql
