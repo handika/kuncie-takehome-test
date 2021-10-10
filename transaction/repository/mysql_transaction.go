@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	timeFormat = "2006-01-02T15:04:05.999Z07:00" // reduce precision from RFC3339Nano as date format
+	timeFormat    = "2006-01-02T15:04:05.999Z07:00" // reduce precision from RFC3339Nano as date format
+	promoFreeItem = 1
+	promoPayless  = 2
+	promoDiscount = 3
 )
 
 type mysqlTransactionRepository struct {
@@ -120,7 +123,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 		// check product promotion
 		freeItems[int(product.ID)] = detail.Qty
 		var discount float64 = 0
-		if product.PromotionId == 1 {
+		if product.PromotionId == promoFreeItem {
 			// check promo free item rule
 			pfir = true
 			pfir := models.PromoFreeItemRule{}
@@ -132,7 +135,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 
 			mainProductId = int(product.ID)
 			freeProductId = pfir.FreeProductId
-		} else if product.PromotionId == 2 {
+		} else if product.PromotionId == promoPayless {
 			// check promo payless rule
 			ppr := models.PromoPaylessRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_payless_rules ppr where ppr.promotion_id = ?", product.PromotionId)
@@ -149,7 +152,7 @@ func (m *mysqlTransactionRepository) Store(ctx context.Context, a *models.Transa
 				subTotalPrice := float64(detail.Qty) * product.Price
 				discount = subTotalPrice - (promoPrice + regularPrice)
 			}
-		} else if product.PromotionId == 3 {
+		} else if product.PromotionId == promoDiscount {
 			// check promo discount rule
 			pdr := models.PromoDiscountRule{}
 			row := m.Conn.QueryRowContext(ctx, "SELECT * FROM promo_discount_rules pdr where pdr.promotion_id = ?", product.PromotionId)
